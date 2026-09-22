@@ -9,7 +9,23 @@ class Post extends Model
 {
     use Translatable;
 
-    protected $fillable = ['author'];
+    protected $fillable = [
+        'author',
+    ];
 
-    public $translatedAttributes = ['title', 'content'];
+    public $translatedAttributes = [
+        'title',
+        'content',
+    ];
+
+    /**
+     * Get all translations for the post.
+     */
+    public function translations()
+    {
+        return $this->hasMany(
+            PostTranslation::class,
+            'post_id'
+        );
+    }
 }

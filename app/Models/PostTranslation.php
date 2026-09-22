@@ -8,5 +8,19 @@ class PostTranslation extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['title', 'content'];
+    protected $fillable = [
+        'title',
+        'content',
+    ];
+
+    /**
+     * Translation belongs to a post.
+     */
+    public function post()
+    {
+        return $this->belongsTo(
+            Post::class,
+            'post_id'
+        );
+    }
 }
