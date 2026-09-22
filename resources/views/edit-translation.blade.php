@@ -3,7 +3,7 @@
 
 <head>
 
-    <title>Create Multilingual Post</title>
+    <title>Manage Post Translation</title>
 
     <style>
 
@@ -15,7 +15,7 @@
         }
 
         .container {
-            width: 700px;
+            width: 800px;
             max-width: 95%;
             margin: 40px auto;
             background: white;
@@ -24,9 +24,24 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
-        h2 {
+        h1 {
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
+        }
+
+        .language-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .english {
+            border-left: 5px solid #007bff;
+        }
+
+        .hindi {
+            border-left: 5px solid #28a745;
         }
 
         label {
@@ -40,13 +55,13 @@
             padding: 10px;
             margin-top: 6px;
             margin-bottom: 15px;
-            border-radius: 5px;
             border: 1px solid #ccc;
+            border-radius: 5px;
         }
 
         textarea {
-            resize: vertical;
             height: 120px;
+            resize: vertical;
         }
 
         button {
@@ -56,47 +71,33 @@
             background: #007bff;
             color: white;
             border-radius: 5px;
-            cursor: pointer;
             font-size: 16px;
+            cursor: pointer;
         }
 
         button:hover {
             background: #0056b3;
         }
 
-        .lang-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 5px solid #007bff;
-        }
-
-        .hindi {
-            border-left-color: #28a745;
-        }
-
         .error-box {
             background: #ffe5e5;
             padding: 12px;
-            margin-bottom: 20px;
             border-radius: 5px;
+            margin-bottom: 20px;
         }
 
         .error-box li {
             color: red;
-            margin-bottom: 5px;
         }
 
-        .back-links {
+        .back {
             text-align: center;
             margin-top: 20px;
         }
 
-        .back-links a {
-            color: #007bff;
+        .back a {
             text-decoration: none;
-            margin: 0 8px;
+            color: #007bff;
         }
 
     </style>
@@ -107,7 +108,11 @@
 
 <div class="container">
 
-    <h2>🌐 Create Multilingual Post</h2>
+    <h1>
+        📝 Manage Translation
+        <br>
+        <small>Post #{{ $post->id }}</small>
+    </h1>
 
 
     @if ($errors->any())
@@ -129,87 +134,79 @@
     @endif
 
 
-    <form method="POST"
-          action="{{ route('posts.store') }}">
+    <form
+        method="POST"
+        action="{{ route('translations.update', $post) }}"
+    >
 
         @csrf
 
-
-        <label>Author</label>
-
-        <input
-            type="text"
-            name="author"
-            value="{{ old('author') }}"
-            placeholder="Enter author name"
-        >
+        @method('PUT')
 
 
         {{-- English --}}
 
-        <div class="lang-section">
+        <div class="language-box english">
 
-            <h3>🇬🇧 English Translation</h3>
+            <h2>🇬🇧 English Translation</h2>
 
             <label>Title</label>
 
             <input
                 type="text"
                 name="title_en"
-                value="{{ old('title_en') }}"
+                value="{{ old('title_en', optional($post->translate('en'))->title) }}"
                 placeholder="Enter English title"
             >
+
 
             <label>Content</label>
 
             <textarea
                 name="content_en"
                 placeholder="Enter English content"
-            >{{ old('content_en') }}</textarea>
+            >{{ old('content_en', optional($post->translate('en'))->content) }}</textarea>
 
         </div>
 
 
         {{-- Hindi --}}
 
-        <div class="lang-section hindi">
+        <div class="language-box hindi">
 
-            <h3>🇮🇳 Hindi Translation</h3>
+            <h2>🇮🇳 Hindi Translation</h2>
 
             <label>Title</label>
 
             <input
                 type="text"
                 name="title_hi"
-                value="{{ old('title_hi') }}"
+                value="{{ old('title_hi', optional($post->translate('hi'))->title) }}"
                 placeholder="हिंदी शीर्षक दर्ज करें"
             >
+
 
             <label>Content</label>
 
             <textarea
                 name="content_hi"
                 placeholder="हिंदी सामग्री दर्ज करें"
-            >{{ old('content_hi') }}</textarea>
+            >{{ old('content_hi', optional($post->translate('hi'))->content) }}</textarea>
 
         </div>
 
 
         <button type="submit">
-            Save Multilingual Post
+            💾 Save Translations
         </button>
 
     </form>
 
 
-    <div class="back-links">
+    <div class="back">
 
-        <a href="{{ route('posts.index') }}">
-            ⬅ Posts
-        </a>
-
-        <a href="{{ route('dashboard') }}">
-            📊 Dashboard
+        <a href="{{ route('translations') }}">
+            ⬅ Back to Translation Manager
         </a>
 
     </div>
