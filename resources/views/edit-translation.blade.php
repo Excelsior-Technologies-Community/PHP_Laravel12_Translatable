@@ -3,10 +3,9 @@
 
 <head>
 
-    <title>Manage Post Translation</title>
+    <title>Edit Multilingual Post</title>
 
     <style>
-
         body {
             font-family: Arial, sans-serif;
             background: #f4f6f9;
@@ -21,7 +20,7 @@
             background: white;
             padding: 30px;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
@@ -42,6 +41,10 @@
 
         .hindi {
             border-left: 5px solid #28a745;
+        }
+
+        .author-box {
+            border-left: 5px solid #6c757d;
         }
 
         label {
@@ -99,23 +102,28 @@
             text-decoration: none;
             color: #007bff;
         }
-
     </style>
 
 </head>
 
 <body>
 
-<div class="container">
+    <div class="container">
 
-    <h1>
-        📝 Manage Translation
-        <br>
-        <small>Post #{{ $post->id }}</small>
-    </h1>
+        <h1>
+
+            ✏️ Edit Multilingual Post
+
+            <br>
+
+            <small>
+                Post #{{ $post->id }}
+            </small>
+
+        </h1>
 
 
-    @if ($errors->any())
+        @if ($errors->any())
 
         <div class="error-box">
 
@@ -123,7 +131,9 @@
 
                 @foreach ($errors->all() as $error)
 
-                    <li>{{ $error }}</li>
+                <li>
+                    {{ $error }}
+                </li>
 
                 @endforeach
 
@@ -131,87 +141,119 @@
 
         </div>
 
-    @endif
+        @endif
 
 
-    <form
-        method="POST"
-        action="{{ route('translations.update', $post) }}"
-    >
+        <form
+            method="POST"
+            action="{{ route('translations.update', $post) }}">
 
-        @csrf
+            @csrf
 
-        @method('PUT')
-
-
-        {{-- English --}}
-
-        <div class="language-box english">
-
-            <h2>🇬🇧 English Translation</h2>
-
-            <label>Title</label>
-
-            <input
-                type="text"
-                name="title_en"
-                value="{{ old('title_en', optional($post->translate('en'))->title) }}"
-                placeholder="Enter English title"
-            >
+            @method('PUT')
 
 
-            <label>Content</label>
+            {{-- Author --}}
 
-            <textarea
-                name="content_en"
-                placeholder="Enter English content"
-            >{{ old('content_en', optional($post->translate('en'))->content) }}</textarea>
+            <div class="language-box author-box">
+
+                <h2>👤 Author</h2>
+
+                <label>
+                    Author Name
+                </label>
+
+                <input
+                    type="text"
+                    name="author"
+                    value="{{ old('author', $post->author) }}"
+                    placeholder="Enter author name">
+
+            </div>
+
+
+            {{-- English --}}
+
+            <div class="language-box english">
+
+                <h2>
+                    🇬🇧 English Translation
+                </h2>
+
+                <label>
+                    Title
+                </label>
+
+                <input
+                    type="text"
+                    name="title_en"
+                    value="{{ old('title_en', optional($post->translate('en'))->title) }}"
+                    placeholder="Enter English title">
+
+                <label>
+                    Content
+                </label>
+
+                <textarea
+                    name="content_en"
+                    placeholder="Enter English content">{{ old('content_en', optional($post->translate('en'))->content) }}</textarea>
+
+            </div>
+
+
+            {{-- Hindi --}}
+
+            <div class="language-box hindi">
+
+                <h2>
+                    🇮🇳 Hindi Translation
+                </h2>
+
+                <label>
+                    Title
+                </label>
+
+                <input
+                    type="text"
+                    name="title_hi"
+                    value="{{ old('title_hi', optional($post->translate('hi'))->title) }}"
+                    placeholder="हिंदी शीर्षक दर्ज करें">
+
+                <label>
+                    Content
+                </label>
+
+                <textarea
+                    name="content_hi"
+                    placeholder="हिंदी सामग्री दर्ज करें">{{ old('content_hi', optional($post->translate('hi'))->content) }}</textarea>
+
+            </div>
+
+
+            <button type="submit">
+
+                💾 Update Post & Translations
+
+            </button>
+
+        </form>
+
+
+        <div class="back">
+
+            <a href="{{ route('posts.index') }}">
+                ⬅ Back to Posts
+            </a>
+
+            &nbsp; | &nbsp;
+
+            <a href="{{ route('translations') }}">
+                Translation Manager
+            </a>
 
         </div>
-
-
-        {{-- Hindi --}}
-
-        <div class="language-box hindi">
-
-            <h2>🇮🇳 Hindi Translation</h2>
-
-            <label>Title</label>
-
-            <input
-                type="text"
-                name="title_hi"
-                value="{{ old('title_hi', optional($post->translate('hi'))->title) }}"
-                placeholder="हिंदी शीर्षक दर्ज करें"
-            >
-
-
-            <label>Content</label>
-
-            <textarea
-                name="content_hi"
-                placeholder="हिंदी सामग्री दर्ज करें"
-            >{{ old('content_hi', optional($post->translate('hi'))->content) }}</textarea>
-
-        </div>
-
-
-        <button type="submit">
-            💾 Save Translations
-        </button>
-
-    </form>
-
-
-    <div class="back">
-
-        <a href="{{ route('translations') }}">
-            ⬅ Back to Translation Manager
-        </a>
 
     </div>
-
-</div>
 
 </body>
 

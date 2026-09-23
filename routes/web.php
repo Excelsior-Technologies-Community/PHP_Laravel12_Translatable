@@ -9,17 +9,15 @@ use App\Http\Controllers\PostController;
 |--------------------------------------------------------------------------
 */
 
-// Display posts with multilingual search/filter
 Route::get('/', [PostController::class, 'index'])
     ->name('posts.index');
 
-// Show create form
 Route::get('/create', [PostController::class, 'create'])
     ->name('posts.create');
 
-// Store post
 Route::post('/store', [PostController::class, 'store'])
     ->name('posts.store');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +28,7 @@ Route::post('/store', [PostController::class, 'store'])
 Route::get('/lang/{locale}', [PostController::class, 'changeLang'])
     ->name('language.change');
 
+
 /*
 |--------------------------------------------------------------------------
 | Translation Dashboard
@@ -38,6 +37,7 @@ Route::get('/lang/{locale}', [PostController::class, 'changeLang'])
 
 Route::get('/dashboard', [PostController::class, 'dashboard'])
     ->name('dashboard');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -48,8 +48,60 @@ Route::get('/dashboard', [PostController::class, 'dashboard'])
 Route::get('/translations', [PostController::class, 'translations'])
     ->name('translations');
 
-Route::get('/translations/{post}/edit', [PostController::class, 'editTranslation'])
-    ->name('translations.edit');
+Route::get(
+    '/translations/{post}/edit',
+    [PostController::class, 'editTranslation']
+)->name('translations.edit');
 
-Route::put('/translations/{post}', [PostController::class, 'updateTranslation'])
-    ->name('translations.update');
+Route::put(
+    '/translations/{post}',
+    [PostController::class, 'updateTranslation']
+)->name('translations.update');
+
+
+/*
+|--------------------------------------------------------------------------
+| Delete Post
+|--------------------------------------------------------------------------
+*/
+
+Route::delete(
+    '/posts/{post}',
+    [PostController::class, 'destroy']
+)->name('posts.destroy');
+
+
+/*
+|--------------------------------------------------------------------------
+| Bulk Delete
+|--------------------------------------------------------------------------
+*/
+
+Route::post(
+    '/posts/bulk-delete',
+    [PostController::class, 'bulkDelete']
+)->name('posts.bulk-delete');
+
+
+/*
+|--------------------------------------------------------------------------
+| Duplicate Post
+|--------------------------------------------------------------------------
+*/
+
+Route::post(
+    '/posts/{post}/duplicate',
+    [PostController::class, 'duplicate']
+)->name('posts.duplicate');
+
+
+/*
+|--------------------------------------------------------------------------
+| CSV Export
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/posts/export/csv',
+    [PostController::class, 'exportCsv']
+)->name('posts.export.csv');

@@ -1,290 +1,650 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ app()->getLocale() }}">
 
 <head>
 
-    <title>Translation Completeness Manager</title>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Translation Manager</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
 
     <style>
-
         body {
+            background: #f5f7fb;
             font-family: Arial, sans-serif;
-            background: #f4f6f9;
-            margin: 0;
-            padding: 0;
         }
 
-        .container {
-            width: 1100px;
-            max-width: 95%;
+        .container-main {
+            max-width: 1250px;
             margin: 40px auto;
         }
 
-        .header {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 9px 14px;
-            border-radius: 5px;
-            text-decoration: none;
+        .page-header {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
             color: white;
-            margin-right: 5px;
+            border-radius: 18px;
+            padding: 30px;
+            margin-bottom: 25px;
         }
 
-        .btn-primary {
-            background: #007bff;
+        .page-header h1 {
+            font-weight: 700;
         }
 
-        .btn-secondary {
-            background: #6c757d;
-        }
-
-        .btn-warning {
-            background: #ffc107;
-            color: #212529;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-
-        .translation-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }
-
-        .top {
+        .action-buttons {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .languages {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
             margin-top: 20px;
         }
 
-        .language {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
+        .manager-card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
         }
 
-        .language h3 {
-            margin-top: 0;
+        .translation-table th {
+            white-space: nowrap;
+        }
+
+        .translation-table td {
+            vertical-align: middle;
+        }
+
+        .language-box {
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
         }
 
         .available {
-            color: #28a745;
-            font-weight: bold;
+            background: #d1e7dd;
+            color: #0f5132;
         }
 
         .missing {
-            color: #dc3545;
-            font-weight: bold;
+            background: #f8d7da;
+            color: #842029;
         }
 
-        .progress {
-            height: 12px;
-            background: #e9ecef;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 10px;
+        .partial {
+            background: #fff3cd;
+            color: #664d03;
         }
 
-        .progress-bar {
-            height: 100%;
-            background: #007bff;
+        .status-badge {
+            font-size: 12px;
+            padding: 7px 10px;
         }
 
-        .edit {
-            background: #007bff;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 5px;
-            text-decoration: none;
+        .empty-state {
+            padding: 50px 20px;
+            text-align: center;
         }
 
-        .pagination {
-            margin-top: 20px;
+        .post-id {
+            font-weight: 700;
+            color: #495057;
         }
 
+        .author-name {
+            font-weight: 600;
+        }
+
+        .translation-title {
+            font-size: 13px;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 768px) {
+
+            .container-main {
+                margin: 20px auto;
+            }
+
+            .page-header {
+                padding: 22px;
+            }
+
+            .manager-card {
+                padding: 15px;
+            }
+
+        }
     </style>
 
 </head>
 
 <body>
 
-<div class="container">
+    <div class="container container-main">
 
-    <div class="header">
+        {{-- Header --}}
+        <div class="page-header">
 
-        <h1>📝 Translation Completeness Manager</h1>
-
-        <p>
-            Manage English and Hindi translations for every post.
-        </p>
-
-        <a href="{{ route('posts.index') }}"
-           class="btn btn-primary">
-            Posts
-        </a>
-
-        <a href="{{ route('dashboard') }}"
-           class="btn btn-secondary">
-            Dashboard
-        </a>
-
-    </div>
-
-
-    @if(session('success'))
-
-        <div class="success">
-            {{ session('success') }}
-        </div>
-
-    @endif
-
-
-    @forelse($posts as $post)
-
-        @php
-
-            $english = $post->translations
-                ->where('locale', 'en')
-                ->first();
-
-            $hindi = $post->translations
-                ->where('locale', 'hi')
-                ->first();
-
-            $englishExists = !is_null($english);
-            $hindiExists = !is_null($hindi);
-
-            $percentage = 0;
-
-            if ($englishExists) {
-                $percentage += 50;
-            }
-
-            if ($hindiExists) {
-                $percentage += 50;
-            }
-
-        @endphp
-
-
-        <div class="translation-card">
-
-            <div class="top">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
 
                 <div>
 
-                    <h2>
-                        Post #{{ $post->id }}
-                    </h2>
+                    <h1>
+                        🌐 Translation Manager
+                    </h1>
 
-                    <p>
-                        Author:
-                        {{ $post->author ?? 'N/A' }}
+                    <p class="mb-0">
+                        Manage English and Hindi translations for all posts.
                     </p>
 
                 </div>
 
+                <div>
 
-                <a href="{{ route('translations.edit', $post) }}"
-                   class="edit">
-                    ✏️ Manage Translation
+                    <span class="badge bg-light text-dark">
+
+                        Current:
+                        {{ strtoupper(app()->getLocale()) }}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            {{-- Action Buttons --}}
+            <div class="action-buttons">
+
+                {{-- All Posts --}}
+                <a
+                    href="{{ url('/') }}"
+                    class="btn btn-light">
+
+                    ← All Posts
+
+                </a>
+
+
+                {{-- Dashboard --}}
+                <a
+                    href="{{ route('dashboard') }}"
+                    class="btn btn-light">
+
+                    📊 Dashboard
+
+                </a>
+
+
+                {{-- Add Post --}}
+                <a
+                    href="{{ url('/create') }}"
+                    class="btn btn-warning">
+
+                    ➕ Add Post
+
+                </a>
+
+
+                {{-- Export CSV --}}
+                <a
+                    href="{{ url('/posts/export/csv') }}"
+                    class="btn btn-success">
+
+                    📄 Export CSV
+
                 </a>
 
             </div>
 
+        </div>
 
-            <div class="languages">
 
-                {{-- English --}}
+        {{-- Flash Success Message --}}
+        @if(session('success'))
 
-                <div class="language">
+            <div
+                class="alert alert-success alert-dismissible fade show"
+                role="alert">
 
-                    <h3>🇬🇧 English</h3>
+                {{ session('success') }}
 
-                    @if($englishExists)
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+                </button>
 
-                        <p class="available">
-                            ✓ Translation Available
-                        </p>
+            </div>
 
-                        <strong>
-                            {{ $english->title }}
-                        </strong>
+        @endif
 
-                    @else
 
-                        <p class="missing">
-                            ✗ Translation Missing
-                        </p>
+        {{-- Flash Error Message --}}
+        @if(session('error'))
 
-                    @endif
+            <div
+                class="alert alert-danger alert-dismissible fade show"
+                role="alert">
+
+                {{ session('error') }}
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+                </button>
+
+            </div>
+
+        @endif
+
+
+        {{-- Translation Manager --}}
+        <div class="manager-card">
+
+            <div
+                class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+
+                <div>
+
+                    <h3 class="mb-1">
+                        📋 Translation Overview
+                    </h3>
+
+                    <p class="text-muted mb-0">
+                        Check translation availability and edit author/content together.
+                    </p>
 
                 </div>
 
+                <div>
 
-                {{-- Hindi --}}
+                    <span class="badge bg-primary">
 
-                <div class="language">
+                        {{ $posts->total() }} Posts
 
-                    <h3>🇮🇳 Hindi</h3>
-
-                    @if($hindiExists)
-
-                        <p class="available">
-                            ✓ Translation Available
-                        </p>
-
-                        <strong>
-                            {{ $hindi->title }}
-                        </strong>
-
-                    @else
-
-                        <p class="missing">
-                            ✗ Translation Missing
-                        </p>
-
-                    @endif
+                    </span>
 
                 </div>
 
             </div>
 
 
-            <div style="margin-top:20px">
+            @if($posts->count())
 
-                <strong>
-                    Translation Completion:
-                    {{ $percentage }}%
-                </strong>
+                <div class="table-responsive">
 
-                <div class="progress">
+                    <table class="table table-hover translation-table">
 
-                    <div
-                        class="progress-bar"
-                        style="width: {{ $percentage }}%">
+                        <thead class="table-light">
+
+                            <tr>
+
+                                <th>
+                                    ID
+                                </th>
+
+                                <th>
+                                    Author
+                                </th>
+
+                                <th>
+                                    English
+                                </th>
+
+                                <th>
+                                    Hindi
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th class="text-center">
+                                    Action
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            @foreach($posts as $post)
+
+                                @php
+
+                                    $english = $post->translations
+                                        ->where('locale', 'en')
+                                        ->first();
+
+                                    $hindi = $post->translations
+                                        ->where('locale', 'hi')
+                                        ->first();
+
+                                    $hasEnglish = $english
+                                        && filled($english->title)
+                                        && filled($english->content);
+
+                                    $hasHindi = $hindi
+                                        && filled($hindi->title)
+                                        && filled($hindi->content);
+
+                                    if ($hasEnglish && $hasHindi) {
+
+                                        $status = 'Complete';
+
+                                    } elseif ($hasEnglish || $hasHindi) {
+
+                                        $status = 'Partial';
+
+                                    } else {
+
+                                        $status = 'Missing';
+
+                                    }
+
+                                @endphp
+
+
+                                <tr>
+
+                                    {{-- ID --}}
+                                    <td>
+
+                                        <span class="post-id">
+
+                                            #{{ $post->id }}
+
+                                        </span>
+
+                                    </td>
+
+
+                                    {{-- Author --}}
+                                    <td>
+
+                                        <span class="author-name">
+
+                                            {{ $post->author }}
+
+                                        </span>
+
+                                    </td>
+
+
+                                    {{-- English --}}
+                                    <td>
+
+                                        @if($hasEnglish)
+
+                                            <div class="language-box available">
+
+                                                <strong>
+                                                    🇬🇧 Available
+                                                </strong>
+
+                                                <div class="translation-title">
+
+                                                    {{ \Illuminate\Support\Str::limit(
+                                                        $english->title,
+                                                        45
+                                                    ) }}
+
+                                                </div>
+
+                                            </div>
+
+                                        @else
+
+                                            <div class="language-box missing">
+
+                                                <strong>
+                                                    🇬🇧 Missing
+                                                </strong>
+
+                                                <div class="translation-title">
+
+                                                    English translation required
+
+                                                </div>
+
+                                            </div>
+
+                                        @endif
+
+                                    </td>
+
+
+                                    {{-- Hindi --}}
+                                    <td>
+
+                                        @if($hasHindi)
+
+                                            <div class="language-box available">
+
+                                                <strong>
+                                                    🇮🇳 Available
+                                                </strong>
+
+                                                <div class="translation-title">
+
+                                                    {{ \Illuminate\Support\Str::limit(
+                                                        $hindi->title,
+                                                        45
+                                                    ) }}
+
+                                                </div>
+
+                                            </div>
+
+                                        @else
+
+                                            <div class="language-box missing">
+
+                                                <strong>
+                                                    🇮🇳 Missing
+                                                </strong>
+
+                                                <div class="translation-title">
+
+                                                    Hindi translation required
+
+                                                </div>
+
+                                            </div>
+
+                                        @endif
+
+                                    </td>
+
+
+                                    {{-- Status --}}
+                                    <td>
+
+                                        @if($status === 'Complete')
+
+                                            <span
+                                                class="badge bg-success status-badge">
+
+                                                ✓ Complete
+
+                                            </span>
+
+                                        @elseif($status === 'Partial')
+
+                                            <span
+                                                class="badge bg-warning text-dark status-badge">
+
+                                                ⚠ Partial
+
+                                            </span>
+
+                                        @else
+
+                                            <span
+                                                class="badge bg-danger status-badge">
+
+                                                ✕ Missing
+
+                                            </span>
+
+                                        @endif
+
+                                    </td>
+
+
+                                    {{-- Action --}}
+                                    <td class="text-center">
+
+                                        <a
+                                            href="{{ route('translations.edit', $post) }}"
+                                            class="btn btn-sm btn-primary">
+
+                                            ✏️ Edit Post & Translation
+
+                                        </a>
+
+                                    </td>
+
+                                </tr>
+
+                            @endforeach
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                {{-- Pagination --}}
+                @if($posts->hasPages())
+
+                    <div class="d-flex justify-content-center mt-4">
+
+                        {{ $posts->links('pagination::bootstrap-5') }}
+
+                    </div>
+
+                @endif
+
+
+            @else
+
+                {{-- Empty State --}}
+                <div class="empty-state">
+
+                    <div class="display-4 mb-3">
+                        🌐
+                    </div>
+
+                    <h4>
+                        No posts found
+                    </h4>
+
+                    <p class="text-muted">
+
+                        Create a post to start managing translations.
+
+                    </p>
+
+
+                    {{-- Create First Post --}}
+                    <a
+                        href="{{ url('/create') }}"
+                        class="btn btn-primary">
+
+                        ➕ Create First Post
+
+                    </a>
+
+                </div>
+
+            @endif
+
+        </div>
+
+
+        {{-- Status Guide --}}
+        <div class="manager-card mt-4">
+
+            <h4 class="mb-3">
+
+                📖 Translation Status Guide
+
+            </h4>
+
+
+            <div class="row g-3">
+
+                {{-- Complete --}}
+                <div class="col-md-4">
+
+                    <div class="alert alert-success mb-0">
+
+                        <strong>
+                            ✓ Complete
+                        </strong>
+
+                        <div class="small mt-1">
+
+                            Both English and Hindi translations
+                            contain title and content.
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                {{-- Partial --}}
+                <div class="col-md-4">
+
+                    <div class="alert alert-warning mb-0">
+
+                        <strong>
+                            ⚠ Partial
+                        </strong>
+
+                        <div class="small mt-1">
+
+                            Only one language has a complete
+                            translation.
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                {{-- Missing --}}
+                <div class="col-md-4">
+
+                    <div class="alert alert-danger mb-0">
+
+                        <strong>
+                            ✕ Missing
+                        </strong>
+
+                        <div class="small mt-1">
+
+                            Neither English nor Hindi has
+                            complete translation data.
+
+                        </div>
+
                     </div>
 
                 </div>
@@ -293,24 +653,13 @@
 
         </div>
 
-    @empty
-
-        <div class="translation-card">
-
-            <h3>No posts available.</h3>
-
-        </div>
-
-    @endforelse
-
-
-    <div class="pagination">
-
-        {{ $posts->links() }}
-
     </div>
 
-</div>
+
+    {{-- Bootstrap JavaScript --}}
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+    </script>
 
 </body>
 
