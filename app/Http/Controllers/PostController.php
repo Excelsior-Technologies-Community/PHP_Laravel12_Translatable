@@ -6,35 +6,53 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PostController extends Controller
 {
     /**
-     * Display posts with multilingual search and language filtering.
+     * Display posts with search, filters, sorting and pagination.
      */
     public function index(Request $request)
     {
         $currentLocale = app()->getLocale();
 
         $search = trim($request->input('search', ''));
-
-        /*
-        |--------------------------------------------------------------------------
-        | Language Filter
-        |--------------------------------------------------------------------------
-        |
-        | current = current application language
-        | all     = all languages
-        | en      = English
-        | hi      = Hindi
-        |
-        */
+        $author = trim($request->input('author', ''));
 
         $language = $request->input('language', 'current');
 
+        $status = $request->input('status', 'all');
+
+        $sort = $request->input('sort', 'latest');
+
+        $perPage = (int) $request->input('per_page', 5);
+
         /*
         |--------------------------------------------------------------------------
-        | Set Display Language
+        | Allowed values
+        |--------------------------------------------------------------------------
+        */
+
+        if (!in_array($language, ['current', 'all', 'en', 'hi'], true)) {
+            $language = 'current';
+        }
+
+        if (!in_array($status, ['all', 'complete', 'partial', 'missing'], true)) {
+            $status = 'all';
+        }
+
+        if (!in_array($sort, ['latest', 'oldest', 'id_asc', 'id_desc', 'author_asc', 'author_desc'], true)) {
+            $sort = 'latest';
+        }
+
+        if (!in_array($perPage, [5, 10, 25, 50], true)) {
+            $perPage = 5;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Set display language
         |--------------------------------------------------------------------------
         */
 
@@ -46,13 +64,13 @@ class PostController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Determine Language Used For Database Search
+        | Determine search language
         |--------------------------------------------------------------------------
         */
 
         $searchLocale = null;
 
-        if ($language === 'en' || $language === 'hi') {
+        if (in_array($language, ['en', 'hi'], true)) {
             $searchLocale = $language;
         } elseif ($language === 'current') {
             $searchLocale = App::getLocale();
@@ -62,15 +80,86 @@ class PostController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Language Filtering
+        | Author Filter
+        |--------------------------------------------------------------------------
+        */
+
+        if ($author !== '') {
+            $query->where(
+                'author',
+                'LIKE',
+                '%' . $author . '%'
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Language Filter
         |--------------------------------------------------------------------------
         */
 
         if ($searchLocale !== null) {
+            $query->whereHas(
+                'translations',
+                function ($q) use ($searchLocale) {
+                    $q->where('locale', $searchLocale);
+                }
+            );
+        }
 
-            $query->whereHas('translations', function ($q) use ($searchLocale) {
-                $q->where('locale', $searchLocale);
+        /*
+        |--------------------------------------------------------------------------
+        | Translation Status Filter
+        |--------------------------------------------------------------------------
+        */
+
+        if ($status === 'complete') {
+
+            $query
+                ->whereHas('translations', function ($q) {
+                    $q->where('locale', 'en');
+                })
+                ->whereHas('translations', function ($q) {
+                    $q->where('locale', 'hi');
+                });
+
+        } elseif ($status === 'partial') {
+
+            $query->where(function ($q) {
+
+                $q->where(function ($subQuery) {
+
+                    $subQuery
+                        ->whereHas('translations', function ($translation) {
+                            $translation->where('locale', 'en');
+                        })
+                        ->whereDoesntHave('translations', function ($translation) {
+                            $translation->where('locale', 'hi');
+                        });
+
+                })->orWhere(function ($subQuery) {
+
+                    $subQuery
+                        ->whereHas('translations', function ($translation) {
+                            $translation->where('locale', 'hi');
+                        })
+                        ->whereDoesntHave('translations', function ($translation) {
+                            $translation->where('locale', 'en');
+                        });
+
+                });
+
             });
+
+        } elseif ($status === 'missing') {
+
+            $query
+                ->whereDoesntHave('translations', function ($translation) {
+                    $translation->where('locale', 'en');
+                })
+                ->whereDoesntHave('translations', function ($translation) {
+                    $translation->where('locale', 'hi');
+                });
         }
 
         /*
@@ -83,24 +172,15 @@ class PostController extends Controller
 
             $query->where(function ($q) use ($search, $searchLocale) {
 
-                /*
-                |--------------------------------------------------------------------------
-                | Search Author
-                |--------------------------------------------------------------------------
-                */
+                $q->where(
+                    'author',
+                    'LIKE',
+                    '%' . $search . '%'
+                );
 
-                $q->where('author', 'LIKE', '%' . $search . '%')
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Search Translation
-                    |--------------------------------------------------------------------------
-                    */
-
-                    ->orWhereHas('translations', function ($translationQuery) use (
-                        $search,
-                        $searchLocale
-                    ) {
+                $q->orWhereHas(
+                    'translations',
+                    function ($translationQuery) use ($search, $searchLocale) {
 
                         $translationQuery->where(function ($translationSearch) use ($search) {
 
@@ -117,12 +197,6 @@ class PostController extends Controller
                                 );
                         });
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | Search Only Selected Language
-                        |--------------------------------------------------------------------------
-                        */
-
                         if ($searchLocale !== null) {
 
                             $translationQuery->where(
@@ -130,8 +204,42 @@ class PostController extends Controller
                                 $searchLocale
                             );
                         }
-                    });
+                    }
+                );
             });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Sorting
+        |--------------------------------------------------------------------------
+        */
+
+        switch ($sort) {
+
+            case 'oldest':
+                $query->oldest();
+                break;
+
+            case 'id_asc':
+                $query->orderBy('id', 'asc');
+                break;
+
+            case 'id_desc':
+                $query->orderBy('id', 'desc');
+                break;
+
+            case 'author_asc':
+                $query->orderBy('author', 'asc');
+                break;
+
+            case 'author_desc':
+                $query->orderBy('author', 'desc');
+                break;
+
+            default:
+                $query->latest();
+                break;
         }
 
         /*
@@ -142,14 +250,17 @@ class PostController extends Controller
 
         $posts = $query
             ->with('translations')
-            ->latest()
-            ->paginate(5)
+            ->paginate($perPage)
             ->withQueryString();
 
         return view('index', compact(
             'posts',
             'search',
-            'language'
+            'author',
+            'language',
+            'status',
+            'sort',
+            'perPage'
         ));
     }
 
@@ -194,12 +305,6 @@ class PostController extends Controller
             'author' => $request->author,
         ];
 
-        /*
-        |--------------------------------------------------------------------------
-        | English Translation
-        |--------------------------------------------------------------------------
-        */
-
         if ($request->filled('title_en')) {
 
             $data['en'] = [
@@ -207,12 +312,6 @@ class PostController extends Controller
                 'content' => $request->content_en,
             ];
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Hindi Translation
-        |--------------------------------------------------------------------------
-        */
 
         if ($request->filled('title_hi')) {
 
@@ -224,7 +323,8 @@ class PostController extends Controller
 
         Post::create($data);
 
-        return redirect('/')
+        return redirect()
+            ->route('posts.index')
             ->with(
                 'success',
                 'Post created successfully with translations.'
@@ -233,7 +333,7 @@ class PostController extends Controller
 
 
     /**
-     * Translation management dashboard.
+     * Translation dashboard.
      */
     public function dashboard()
     {
@@ -247,12 +347,6 @@ class PostController extends Controller
             ->where('locale', 'hi')
             ->count();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Fully Translated Posts
-        |--------------------------------------------------------------------------
-        */
-
         $fullyTranslated = DB::table('posts')
             ->whereIn('id', function ($query) {
                 $query->select('post_id')
@@ -265,12 +359,6 @@ class PostController extends Controller
                     ->where('locale', 'hi');
             })
             ->count();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Partially Translated Posts
-        |--------------------------------------------------------------------------
-        */
 
         $partiallyTranslated = DB::table('posts')
             ->where(function ($query) {
@@ -304,12 +392,6 @@ class PostController extends Controller
 
             })
             ->count();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Missing Translations
-        |--------------------------------------------------------------------------
-        */
 
         $missingTranslations = max(
             0,
@@ -347,7 +429,7 @@ class PostController extends Controller
 
 
     /**
-     * Show edit translation form.
+     * Show translation edit form.
      */
     public function editTranslation(Post $post)
     {
@@ -361,13 +443,15 @@ class PostController extends Controller
 
 
     /**
-     * Update English and Hindi translations.
+     * Update author and translations.
      */
     public function updateTranslation(
         Request $request,
         Post $post
     ) {
         $request->validate([
+            'author' => 'nullable|string|max:255',
+
             'title_en' => 'nullable|string|max:255',
             'content_en' => 'nullable|string',
 
@@ -377,11 +461,22 @@ class PostController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | Update Author
+        |--------------------------------------------------------------------------
+        */
+
+        $post->author = $request->author;
+
+        /*
+        |--------------------------------------------------------------------------
         | English Translation
         |--------------------------------------------------------------------------
         */
 
-        if ($request->filled('title_en')) {
+        if (
+            $request->filled('title_en')
+            || $request->filled('content_en')
+        ) {
 
             $translation = $post->translateOrNew('en');
 
@@ -395,7 +490,10 @@ class PostController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if ($request->filled('title_hi')) {
+        if (
+            $request->filled('title_hi')
+            || $request->filled('content_hi')
+        ) {
 
             $translation = $post->translateOrNew('hi');
 
@@ -409,8 +507,149 @@ class PostController extends Controller
             ->route('translations')
             ->with(
                 'success',
-                'Translations updated successfully.'
+                'Post and translations updated successfully.'
             );
+    }
+
+
+    /**
+     * Delete a post.
+     */
+    public function destroy(Post $post)
+    {
+        $post->delete();
+
+        return redirect()
+            ->route('posts.index')
+            ->with(
+                'success',
+                'Post deleted successfully.'
+            );
+    }
+
+
+    /**
+     * Bulk delete selected posts.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'post_ids' => 'required|array|min:1',
+            'post_ids.*' => 'integer|exists:posts,id',
+        ]);
+
+        Post::whereIn(
+            'id',
+            $request->post_ids
+        )->delete();
+
+        return redirect()
+            ->route('posts.index')
+            ->with(
+                'success',
+                count($request->post_ids)
+                . ' post(s) deleted successfully.'
+            );
+    }
+
+
+    /**
+     * Duplicate a post with all translations.
+     */
+    public function duplicate(Post $post)
+    {
+        $post->load('translations');
+
+        $newPost = Post::create([
+            'author' => $post->author,
+        ]);
+
+        foreach ($post->translations as $translation) {
+
+            $newTranslation = $newPost->translateOrNew(
+                $translation->locale
+            );
+
+            $newTranslation->title = $translation->title;
+            $newTranslation->content = $translation->content;
+        }
+
+        $newPost->save();
+
+        return redirect()
+            ->route('posts.index')
+            ->with(
+                'success',
+                'Post duplicated successfully with all translations.'
+            );
+    }
+
+
+    /**
+     * Export posts as CSV.
+     */
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $posts = Post::with('translations')
+            ->latest()
+            ->get();
+
+        $filename = 'multilingual-posts-' . now()->format('Y-m-d-H-i-s') . '.csv';
+
+        return response()->streamDownload(
+            function () use ($posts) {
+
+                $handle = fopen('php://output', 'w');
+
+                fputcsv($handle, [
+                    'ID',
+                    'Author',
+                    'English Title',
+                    'English Content',
+                    'Hindi Title',
+                    'Hindi Content',
+                    'Translation Status',
+                ]);
+
+                foreach ($posts as $post) {
+
+                    $english = $post->translations
+                        ->where('locale', 'en')
+                        ->first();
+
+                    $hindi = $post->translations
+                        ->where('locale', 'hi')
+                        ->first();
+
+                    $hasEnglish = !is_null($english);
+                    $hasHindi = !is_null($hindi);
+
+                    if ($hasEnglish && $hasHindi) {
+                        $status = 'Complete';
+                    } elseif ($hasEnglish || $hasHindi) {
+                        $status = 'Partial';
+                    } else {
+                        $status = 'Missing';
+                    }
+
+                    fputcsv($handle, [
+                        $post->id,
+                        $post->author,
+                        $english?->title ?? '',
+                        $english?->content ?? '',
+                        $hindi?->title ?? '',
+                        $hindi?->content ?? '',
+                        $status,
+                    ]);
+                }
+
+                fclose($handle);
+            },
+            $filename,
+            [
+                'Content-Type' => 'text/csv',
+            ]
+        );
     }
 
 
