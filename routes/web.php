@@ -105,3 +105,32 @@ Route::get(
     '/posts/export/csv',
     [PostController::class, 'exportCsv']
 )->name('posts.export.csv');
+
+/*
+|--------------------------------------------------------------------------
+| Auto-Translation Studio
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/translator', [PostController::class, 'translator'])->name('translator.index');
+Route::post('/translator/auto-translate', [PostController::class, 'autoTranslate'])->name('translator.auto');
+
+/*
+|--------------------------------------------------------------------------
+| Translation Completeness Analytics
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/analytics', [PostController::class, 'analytics'])->name('analytics.index');
+Route::get('/analytics/data', [PostController::class, 'analyticsData'])->name('analytics.data');
+
+/*
+|--------------------------------------------------------------------------
+| Bulk JSON / CSV Import & Export Studio
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/bulk-manage', [PostController::class, 'bulkManage'])->name('bulk.manage');
+Route::post('/bulk-import/json', [PostController::class, 'importJson'])->name('bulk.import.json');
+Route::post('/bulk-import/csv', [PostController::class, 'importCsv'])->name('bulk.import.csv');
+Route::get('/bulk-export/json', [PostController::class, 'exportJson'])->name('bulk.export.json');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Services\TranslationStudioService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
@@ -667,5 +668,123 @@ class PostController extends Controller
         }
 
         return redirect()->back();
+    }
+
+    /**
+     * Display Auto-Translator Studio view.
+     */
+    public function translator()
+    {
+        return view('translator');
+    }
+
+    /**
+     * Run Auto-Translation API endpoint.
+     */
+    public function autoTranslate(Request $request, TranslationStudioService $service)
+    {
+        $request->validate([
+            'text' => 'required|string',
+            'target' => 'nullable|string|in:hi,en',
+        ]);
+
+        $translated = $service->autoTranslate($request->input('text'), $request->input('target', 'hi'));
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'original' => $request->input('text'),
+                'translated' => $translated,
+                'target' => $request->input('target', 'hi'),
+            ]);
+        }
+
+        return redirect()->route('translator.index')->with([
+            'translated_text' => $translated,
+            'original_text' => $request->input('text'),
+        ]);
+    }
+
+    /**
+     * Display Multilingual Completeness Analytics.
+     */
+    public function analytics(TranslationStudioService $service)
+    {
+        $analytics = $service->getAnalyticsData();
+        return view('analytics', compact('analytics'));
+    }
+
+    /**
+     * Return JSON data for analytics charts.
+     */
+    public function analyticsData(TranslationStudioService $service)
+    {
+        return response()->json($service->getAnalyticsData());
+    }
+
+    /**
+     * Display Bulk Import/Export Studio.
+     */
+    public function bulkManage()
+    {
+        return view('bulk_manage');
+    }
+
+    /**
+     * Import JSON multi-language posts.
+     */
+    public function importJson(Request $request, TranslationStudioService $service)
+    {
+        $request->validate([
+            'json_file' => 'nullable|file|mimes:json,txt',
+            'json_text' => 'nullable|string',
+        ]);
+
+        $jsonText = '';
+        if ($request->hasFile('json_file')) {
+            $jsonText = file_get_contents($request->file('json_file')->getRealPath());
+        } else {
+            $jsonText = $request->input('json_text', '');
+        }
+
+        $records = json_decode($jsonText, true);
+
+        if (!is_array($records)) {
+            return redirect()->back()->with('error', 'Invalid JSON format uploaded.');
+        }
+
+        $count = $service->importBulkJson($records);
+
+        return redirect()->route('bulk.manage')->with('success', "Successfully imported {$count} multi-language post(s) via JSON.");
+    }
+
+    /**
+     * Import CSV multi-language posts.
+     */
+    public function importCsv(Request $request, TranslationStudioService $service)
+    {
+        $request->validate([
+            'csv_file' => 'required|file',
+        ]);
+
+        $csvContent = file_get_contents($request->file('csv_file')->getRealPath());
+        $count = $service->importBulkCsv($csvContent);
+
+        return redirect()->route('bulk.manage')->with('success', "Successfully imported {$count} multi-language post(s) via CSV.");
+    }
+
+    /**
+     * Export all multi-language posts as formatted JSON package.
+     */
+    public function exportJson(TranslationStudioService $service)
+    {
+        $data = $service->exportBulkJson();
+        $filename = 'multilingual-export-' . now()->format('Y-m-d-H-i-s') . '.json';
+
+        return response()->streamDownload(function () use ($data) {
+            echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        }, $filename, [
+            'Content-Type' => 'application/json',
+        ]);
     }
 }
