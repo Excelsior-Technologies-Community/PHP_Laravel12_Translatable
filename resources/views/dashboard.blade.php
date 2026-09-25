@@ -149,48 +149,14 @@
         </div>
 
 
-        <div class="top-actions">
-
-            {{-- All Posts --}}
-            <a
-                href="{{ url('/') }}"
-                class="btn btn-light">
-
-                ← All Posts
-
-            </a>
-
-
-            {{-- Create Post --}}
-            {{-- Direct URL avoids undefined route-name error --}}
-            <a
-                href="{{ url('/create') }}"
-                class="btn btn-light">
-
-                ➕ Add Post
-
-            </a>
-
-
-            {{-- Translation Manager --}}
-            <a
-                href="{{ route('translations') }}"
-                class="btn btn-warning">
-
-                📝 Translation Manager
-
-            </a>
-
-
-            {{-- CSV Export --}}
-            <a
-                href="{{ url('/posts/export/csv') }}"
-                class="btn btn-success">
-
-                📄 Export CSV
-
-            </a>
-
+        <div class="top-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="{{ url('/') }}" class="btn btn-light">← All Posts</a>
+            <a href="{{ url('/create') }}" class="btn btn-light">➕ Add Post</a>
+            <a href="{{ route('translations') }}" class="btn btn-warning">📝 Manager</a>
+            <a href="{{ route('translator.index') }}" class="btn btn-info text-white">🌐 Auto-Translator</a>
+            <a href="{{ route('analytics.index') }}" class="btn btn-primary">📊 Analytics</a>
+            <a href="{{ route('bulk.manage') }}" class="btn btn-dark">📂 Bulk Import/Export</a>
+            <a href="{{ url('/posts/export/csv') }}" class="btn btn-success">📄 Export CSV</a>
         </div>
 
     </div>
